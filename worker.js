@@ -40,19 +40,18 @@ async function fetchCoupon(shopName, poi_id_str) {
   };
 
   const headers = {
-  'origin': 'https://offsiteact.meituan.com',
-  'accept-encoding': 'gzip, deflate, br',
-  'accept': '*/*',
-  'referer': `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`,
-  'sec-fetch-mode': 'cors',
-  'sec-fetch-site': 'same-origin',
-  'accept-language': 'zh-CN,zh-Hans;q=0.9',
-  'cookie': '_lxsdk_s=xxx; logan_session_token=xxx; ...',
-  'mtgsig': JSON.stringify({ a1: "1.2", a2: Date.now(), a3: "xxx", a5: "xxx", a6: "xxx", a8: "xxx", a9: "4.1.1,7,195", a10: "28", x0: 4, d1: "xxx" }),
-  'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
-  'content-type': 'application/json;charset=utf-8'
-};
-
+    'origin': 'https://offsiteact.meituan.com',
+    'accept-encoding': 'gzip, deflate, br',
+    'accept': '*/*',
+    'referer': `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`,
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-origin',
+    'accept-language': 'zh-CN,zh-Hans;q=0.9',
+    'cookie': '_lxsdk_s=xxx; logan_session_token=xxx; ...',
+    'mtgsig': JSON.stringify({ a1: "1.2", a2: Date.now(), a3: "xxx", a5: "xxx", a6: "xxx", a8: "xxx", a9: "4.1.1,7,195", a10: "28", x0: 4, d1: "xxx" }),
+    'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
+    'content-type': 'application/json;charset=utf-8'
+  };
 
   for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
@@ -67,10 +66,16 @@ async function fetchCoupon(shopName, poi_id_str) {
       clearTimeout(timeout);
 
       const data = await resp.json();
+
+      // ✅ 修正提取逻辑
       let couponAmount = '无';
-      if (data.infos && data.infos.length > 0 && data.infos[0].giftInfo && data.infos[0].giftInfo.coupon_amount) {
-        couponAmount = data.infos[0].giftInfo.coupon_amount;
+      if (data.infos && data.infos.length > 0) {
+        const firstInfo = data.infos[0];
+        if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
+          couponAmount = firstInfo.giftInfo.coupon_amount;
+        }
       }
+
       return `${shopName} ${couponAmount}`;
     } catch (err) {
       if (i === RETRY_TIMES) {
@@ -103,11 +108,11 @@ export default {
     try {
       const list = await env.SJQ.list();
       const kvItems = await Promise.all(
-  list.keys.map(async k => {
-    const shopName = await env.SJQ.get(k.name);
-    return { poi_id_str: k.name, shopName };
-  })
-);
+        list.keys.map(async k => {
+          const shopName = await env.SJQ.get(k.name);
+          return { poi_id_str: k.name, shopName };
+        })
+      );
 
       const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item => fetchCoupon(item.shopName, item.poi_id_str));
 
