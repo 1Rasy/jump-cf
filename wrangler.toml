@@ -1,0 +1,19 @@
+name = "test"
+main = "worker.js"
+compatibility_date = "2025-10-23"
+
+# KV 命名空间
+[[kv_namespaces]]
+binding = "SJQ"
+id = "7670b3be159047069217074b85409d7d"
+
+
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+
+[triggers]
+# 可选域名绑定
+routes = ["1rasy.ggff.net/*"]
