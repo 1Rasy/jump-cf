@@ -102,7 +102,12 @@ export default {
   async fetch(request, env) {
     try {
       const list = await env.SJQ.list();
-      const kvItems = list.keys.map(k => ({ poi_id_str: k.name, shopName: await env.SJQ.get(k.name) }));
+      const kvItems = await Promise.all(
+  list.keys.map(async k => {
+    const shopName = await env.SJQ.get(k.name);
+    return { poi_id_str: k.name, shopName };
+  })
+);
 
       const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item => fetchCoupon(item.shopName, item.poi_id_str));
 
