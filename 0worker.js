@@ -17,11 +17,11 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
     'mtgsig': JSON.stringify({ a1: "1.2", a2: Date.now(), a3: "z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0", a5: "oVjAOcgNjj6drqWh0Ubeyg4KnNi785b5e/t6eKkotxd350Tc3Vi86EzVWQhAMkrJ37bU7EJE4Nb/xv36wzkdq4bU0mZ8mEZ1XLes3W4K691QgiSjpcTgL1mAMqwORW==", a6: "h1.9gWg/ByL6/Q+dkFaG52FW+tgwc3rraYxeTD9Vs6LQUpEzdcQ+APN9Xyy/w9Er0olxFSqAMXz+oCrASX0gIPpm4cPDGeBY0UbNJOzmydKSBAKOt6c1YHQyl/fZYtMWkH+wzXsANLR/c88rvspt+RemdcNrcis+SDhKS3itQVkJvC/YJhXgRV937wIf3TSc+uoKoVesVD8sVhgvC3FGeQ7M51+z+G1piZkFFtlXPVQLp8g=", a8: "470b09d42a36b46fae88765f3ad8858f", a9: "4.1.1,7,195", a10: "28", x0: 4, d1: "6f961e29be5a92d1eb8b5a5dd1cc8cf6" }),
     'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1','content-type': 'application/json;charset=utf-8'
   };
- for (let i = 0; i <= RETRY_TIMES; i++) {
+
+  for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000); // 5秒超时
-      const t0 = Date.now();
+      const timeout = setTimeout(() => controller.abort(), 5000);
 
       const resp = await fetch(
         'https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1',
@@ -29,7 +29,6 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
       );
 
       clearTimeout(timeout);
-      const ms = Date.now() - t0;
 
       const data = await resp.json();
 
@@ -48,7 +47,9 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
         await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
       }
 
-      return `${shopName} ${couponAmount} (${ms} ms)`;
+      // 返回用于生成按钮的文本
+      return `${shopName} ${couponAmount}`;
+
     } catch (err) {
       if (i === RETRY_TIMES) {
         return `${shopName} 无`;
@@ -92,15 +93,39 @@ export default {
         })
       );
 
-      // 并发请求
+      // 并发请求更新 SHOP KV
       const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item =>
         fetchCoupon(item.shopName, item.poi_id_str, env)
       );
 
-      return new Response(results.join("\n"), {
+      // 生成按钮 HTML
+      const buttonsHtml = results.map((text, idx) => {
+        const item = kvItems[idx];
+        return `<button onclick="window.location.href='${item.poi_id_str}'"
+                        style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
+                  ${text}
+                </button>`;
+      }).join("\n");
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="zh">
+        <head>
+          <meta charset="UTF-8">
+          <title>商家优惠列表</title>
+        </head>
+        <body>
+          <h2>商家优惠</h2>
+          ${buttonsHtml}
+        </body>
+        </html>
+      `;
+
+      return new Response(html, {
         status: 200,
-        headers: { "Content-Type": "text/plain;charset=UTF-8" }
+        headers: { "Content-Type": "text/html;charset=UTF-8" }
       });
+
     } catch (err) {
       return new Response(err.toString(), { status: 500 });
     }
