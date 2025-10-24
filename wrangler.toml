@@ -7,6 +7,9 @@ compatibility_date = "2025-10-23"
 binding = "SJQ"
 id = "7670b3be159047069217074b85409d7d"
 
+[[kv_namespaces]]
+binding = "SHOP"
+id = "cf53d7f7e98a4b1b85b306e90d0b85b6"
 
 [observability]
 [observability.logs]
