@@ -1,6 +1,7 @@
 name = "test"
 main = "worker.js"
 compatibility_date = "2025-10-23"
+type = "modules"
 
 # KV 命名空间
 [[kv_namespaces]]
@@ -17,6 +18,5 @@ enabled = true
 head_sampling_rate = 1
 invocation_logs = true
 
-[triggers]
-# 可选域名绑定
+
 routes = ["1rasy.ggff.net/*"]
