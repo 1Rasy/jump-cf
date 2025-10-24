@@ -21,30 +21,34 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000); // 5秒超时
-
       const t0 = Date.now();
+
       const resp = await fetch(
         'https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1',
         { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal }
       );
 
       clearTimeout(timeout);
+      const ms = Date.now() - t0;
+
       const data = await resp.json();
 
-      // ✅ 安全提取 coupon_amount
+      // 安全提取 coupon_amount
       let couponAmount = '无';
       if (Array.isArray(data.infos) && data.infos.length > 0) {
         const firstInfo = data.infos[0];
         if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
           const raw = firstInfo.giftInfo.coupon_amount;
-          couponAmount = couponMap[Number(raw)] || String(raw); // 映射或保留原值
+          couponAmount = couponMap[Number(raw)] || String(raw);
         }
       }
 
       // 写入 SHOP KV
-      await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
+      if (env.SHOP) {
+        await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
+      }
 
-      return `${shopName} ${couponAmount} (${Date.now() - t0} ms)`;
+      return `${shopName} ${couponAmount} (${ms} ms)`;
     } catch (err) {
       if (i === RETRY_TIMES) {
         return `${shopName} 无`;
@@ -74,33 +78,31 @@ async function asyncPool(limit, array, iteratorFn) {
 }
 
 // Worker 入口
-addEventListener("fetch", event => {
-  event.respondWith(handleRequest(event));
-});
+export default {
+  async fetch(request, env) {
+    try {
+      if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
 
-async function handleRequest(event) {
-  const env = event.env || event; // wrangler v3 绑定 KV
+      // 获取 SJQ KV 所有 key
+      const list = await env.SJQ.list();
+      const kvItems = await Promise.all(
+        list.keys.map(async k => {
+          const shopName = await env.SJQ.get(k.name);
+          return { poi_id_str: k.name, shopName };
+        })
+      );
 
-  try {
-    // 获取 SJQ KV 所有 key
-    const list = await env.SJQ.list();
-    const kvItems = await Promise.all(
-      list.keys.map(async k => {
-        const shopName = await env.SJQ.get(k.name);
-        return { poi_id_str: k.name, shopName };
-      })
-    );
+      // 并发请求
+      const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item =>
+        fetchCoupon(item.shopName, item.poi_id_str, env)
+      );
 
-    // 并发请求
-    const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item =>
-      fetchCoupon(item.shopName, item.poi_id_str, env)
-    );
-
-    return new Response(results.join("\n"), {
-      status: 200,
-      headers: { "Content-Type": "text/plain;charset=UTF-8" }
-    });
-  } catch (err) {
-    return new Response(err.toString(), { status: 500 });
+      return new Response(results.join("\n"), {
+        status: 200,
+        headers: { "Content-Type": "text/plain;charset=UTF-8" }
+      });
+    } catch (err) {
+      return new Response(err.toString(), { status: 500 });
+    }
   }
-}
+};
