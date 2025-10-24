@@ -29,31 +29,23 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
     
       clearTimeout(timeout);
 
-      const text = await resp.text();
-     
-      // ✅ 修正提取逻辑
-     // ✅ 修正提取逻辑
-let couponText = '无';
-try {
-  const data = await resp.json();  // 改回原来的 json 方式
-  if (data.infos && data.infos.length > 0) {
-    const firstInfo = data.infos[0];
-    if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
-      const raw = firstInfo.giftInfo.coupon_amount;
-      couponText = couponMap[raw] || raw; // 保留映射转换
+     const data = await resp.json();
+
+      let couponText = "无";
+      if (data.infos && data.infos.length > 0) {
+        const raw = data.infos[0].giftInfo?.coupon_amount;
+        couponText = couponMap[raw] || raw || "无";
+      }
+
+      // 写入 SHOP KV
+      await env.SHOP.put(poi_id_str, `${shopName} ${couponText}`);
+
+      return `${shopName} ${couponText} (${Date.now() - t0} ms)`;
+    } catch (err) {
+      if (i === RETRY_TIMES) return `${shopName} 无`;
     }
   }
-} catch {
-  couponText = "解析失败";
 }
-
-// ✅ 写入 SHOP KV
-await env.SHOP.put(poi_id_str, `${shopName} ${couponText}`);
-
-// ✅ 返回字符串（包含耗时）
-const ms = Date.now() - t0;
-return `${shopName} ${couponText} (${ms} ms)`;
-
 
 async function asyncPool(limit, array, iteratorFn) {
   const ret = [];
@@ -64,37 +56,36 @@ async function asyncPool(limit, array, iteratorFn) {
     if (limit <= array.length) {
       const e = p.then(() => executing.splice(executing.indexOf(e), 1));
       executing.push(e);
-      if (executing.length >= limit) {
-        await Promise.race(executing);
-      }
+      if (executing.length >= limit) await Promise.race(executing);
     }
   }
   return Promise.all(ret);
 }
 
-export default {
-  async fetch(request, env) {
-    try {
-      const list = await env.SJQ.list();
-      const kvItems = await Promise.all(
-        list.keys.map(async (k) => {
-          const shopName = await env.SJQ.get(k.name);
-          return { poi_id_str: k.name, shopName };
-        })
-      );
+addEventListener("fetch", event => {
+  event.respondWith(handleRequest(event));
+});
 
-      const results = await asyncPool(
-        MAX_CONCURRENT_REQUESTS,
-        kvItems,
-        (item) => fetchCoupon(item.shopName, item.poi_id_str, env)
-      );
+async function handleRequest(event) {
+  const env = event?.bindings || event; // 取绑定 KV
 
-      return new Response(results.join("\n"), {
-        status: 200,
-        headers: { "Content-Type": "text/plain;charset=UTF-8" }
-      });
-    } catch (err) {
-      return new Response(err.toString(), { status: 500 });
-    }
+  try {
+    const list = await env.SJQ.list();
+    const kvItems = await Promise.all(
+      list.keys.map(async k => {
+        const shopName = await env.SJQ.get(k.name);
+        return { poi_id_str: k.name, shopName };
+      })
+    );
+
+    const results = await asyncPool(
+      MAX_CONCURRENT_REQUESTS,
+      kvItems,
+      item => fetchCoupon(item.shopName, item.poi_id_str, env)
+    );
+
+    return new Response(results.join("\n"), { status: 200, headers: { "Content-Type": "text/plain;charset=UTF-8" } });
+  } catch (err) {
+    return new Response(err.toString(), { status: 500 });
   }
-};
+}
