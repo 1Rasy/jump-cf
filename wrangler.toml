@@ -1,5 +1,5 @@
 name = "test"
-main = "1worker.js"
+main = "0worker.js"
 compatibility_date = "2025-10-23"
 
 
