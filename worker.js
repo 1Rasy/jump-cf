@@ -1,6 +1,9 @@
 const MAX_CONCURRENT_REQUESTS = 12; // 并行请求数量
 const RETRY_TIMES = 2; // 出错重试次数
 
+// 映射优惠券金额到文本
+const couponMap = { 100: "8-1", 200: "10-2", 300: "12-3", 400: "13-4", 500: "15-5" };
+
 async function fetchCoupon(shopName, poi_id_str, env) {
   const body = {lat: 22.986847,lon: 113.126331,geoType: "GCJ02",geoSource: "network",geoAccuracy: 500,mediumParams: {pageSrc2: "0c3bfd35279b4140b3bd8ecbc41301d6",pageSrc1: "CPS_SELF_OUT_SRC_H5_LINK",
       pageSrc3: "e15d0d4258004ba5b44c1c85e4db4084",scene: "CPS_SELF_SRC",activityId: "6",poi_id_str: poi_id_str,mediumSrc1: "0c3bfd35279b4140b3bd8ecbc41301d6",outActivityId: "6",p: 1016502508465025024,mediaPvId: "dafkdsajffjafdfs",mediaUserId: "10086",bizId: "0c3bfd35279b4140b3bd8ecbc41301d6",callback: "jsonpWXLoader",poiId: "-100"},
@@ -14,62 +17,72 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
     'mtgsig': JSON.stringify({ a1: "1.2", a2: Date.now(), a3: "z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0", a5: "oVjAOcgNjj6drqWh0Ubeyg4KnNi785b5e/t6eKkotxd350Tc3Vi86EzVWQhAMkrJ37bU7EJE4Nb/xv36wzkdq4bU0mZ8mEZ1XLes3W4K691QgiSjpcTgL1mAMqwORW==", a6: "h1.9gWg/ByL6/Q+dkFaG52FW+tgwc3rraYxeTD9Vs6LQUpEzdcQ+APN9Xyy/w9Er0olxFSqAMXz+oCrASX0gIPpm4cPDGeBY0UbNJOzmydKSBAKOt6c1YHQyl/fZYtMWkH+wzXsANLR/c88rvspt+RemdcNrcis+SDhKS3itQVkJvC/YJhXgRV937wIf3TSc+uoKoVesVD8sVhgvC3FGeQ7M51+z+G1piZkFFtlXPVQLp8g=", a8: "470b09d42a36b46fae88765f3ad8858f", a9: "4.1.1,7,195", a10: "28", x0: 4, d1: "6f961e29be5a92d1eb8b5a5dd1cc8cf6" }),
     'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1','content-type': 'application/json;charset=utf-8'
   };
-  //映射
-    const couponMap = {100: "8-1",200: "10-2",300: "12-3",400: "13-4",500: "15-5"};
-  for (let i = 0; i <= RETRY_TIMES; i++) {
+ for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
       const t0 = Date.now();
-      const resp = await fetch('https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: controller.signal});
-    
+      const resp = await fetch(
+        'https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1',
+        { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal }
+      );
+
       clearTimeout(timeout);
+      const data = await resp.json();
 
-     const data = await resp.json();
-
-      let couponText = "无";
-      if (data.infos && data.infos.length > 0) {
-        const raw = data.infos[0].giftInfo?.coupon_amount;
-        couponText = couponMap[raw] || raw || "无";
+      // ✅ 安全提取 coupon_amount
+      let couponAmount = '无';
+      if (Array.isArray(data.infos) && data.infos.length > 0) {
+        const firstInfo = data.infos[0];
+        if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
+          const raw = firstInfo.giftInfo.coupon_amount;
+          couponAmount = couponMap[Number(raw)] || String(raw); // 映射或保留原值
+        }
       }
 
       // 写入 SHOP KV
-      await env.SHOP.put(poi_id_str, `${shopName} ${couponText}`);
+      await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
 
-      return `${shopName} ${couponText} (${Date.now() - t0} ms)`;
+      return `${shopName} ${couponAmount} (${Date.now() - t0} ms)`;
     } catch (err) {
-      if (i === RETRY_TIMES) return `${shopName} 无`;
+      if (i === RETRY_TIMES) {
+        return `${shopName} 无`;
+      }
     }
   }
 }
 
+// 并发池
 async function asyncPool(limit, array, iteratorFn) {
   const ret = [];
   const executing = [];
+
   for (const item of array) {
     const p = Promise.resolve().then(() => iteratorFn(item));
     ret.push(p);
-    if (limit <= array.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1));
-      executing.push(e);
-      if (executing.length >= limit) await Promise.race(executing);
+
+    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+    executing.push(e);
+
+    if (executing.length >= limit) {
+      await Promise.race(executing);
     }
   }
+
   return Promise.all(ret);
 }
 
+// Worker 入口
 addEventListener("fetch", event => {
   event.respondWith(handleRequest(event));
 });
 
 async function handleRequest(event) {
-  const env = event?.bindings || event; // 取绑定 KV
+  const env = event.env || event; // wrangler v3 绑定 KV
 
   try {
+    // 获取 SJQ KV 所有 key
     const list = await env.SJQ.list();
     const kvItems = await Promise.all(
       list.keys.map(async k => {
@@ -78,13 +91,15 @@ async function handleRequest(event) {
       })
     );
 
-    const results = await asyncPool(
-      MAX_CONCURRENT_REQUESTS,
-      kvItems,
-      item => fetchCoupon(item.shopName, item.poi_id_str, env)
+    // 并发请求
+    const results = await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item =>
+      fetchCoupon(item.shopName, item.poi_id_str, env)
     );
 
-    return new Response(results.join("\n"), { status: 200, headers: { "Content-Type": "text/plain;charset=UTF-8" } });
+    return new Response(results.join("\n"), {
+      status: 200,
+      headers: { "Content-Type": "text/plain;charset=UTF-8" }
+    });
   } catch (err) {
     return new Response(err.toString(), { status: 500 });
   }
