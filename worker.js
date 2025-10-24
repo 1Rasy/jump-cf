@@ -32,7 +32,7 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
         headers,
         body: JSON.stringify(body),
         signal: controller.signal});
-      const ms = Date.now() - t0;
+    
       clearTimeout(timeout);
 
       const text = await resp.text();
