@@ -88,6 +88,12 @@ export default {
       if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
 
       const today0h1 = getTodayBeijing0h1();
+      
+      const cachedHtml = await env.SHOP.get("CACHED_HTML");
+if (cachedHtml && cacheTime > today0h1) {
+  htmlCache = cachedHtml;
+  return new Response(cachedHtml, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
+}
 
       // 如果缓存存在且未过期，直接返回
       if (htmlCache && cacheTime > today0h1) {
@@ -115,29 +121,102 @@ export default {
         fetchCoupon(item.shopName, item.poi_id_str, env)
       );
 
-      // 使用 SHOP KV 生成按钮
-      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
-        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
-        const link = `https://abc.com/poi_id_str=${item.poi_id_str}`;
-        return `<button onclick="window.location.href='${link}'"
-                        style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
-                  ${text}
-                </button>`;
-      }));
+     const html = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    padding: 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #f8f9fa;
+    color: #343a40;
+  }
+  h1 {
+    color: #007bff;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  button {
+    display: block;
+    margin: 10px 0;
+    padding: 12px;
+    width: 100%;
+    background-color: #ffffff;
+    color: #343a40;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  button:hover {
+    background-color: #e9ecef;
+    border-color: #007bff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  #container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+<h1>商家优惠列表</h1>
+<div id="container">
+  <p style="text-align: center;">正在加载历史商家数据...</p>
+</div>
+<script>
+async function loadHistory() {
+  const container = document.getElementById('container');
+  container.innerHTML = '<p style="text-align: center;">加载中...</p>';
 
-      const html = `
-        <!DOCTYPE html>
-        <html lang="zh">
-        <head>
-          <meta charset="UTF-8">
-          <title>商家优惠列表</title>
-        </head>
-        <body>
-          <h2>商家优惠</h2>
-          ${buttonsHtml.join("\n")}
-        </body>
-        </html>
-      `;
+  try {
+    const res = await fetch('/sjq-data');
+    if (!res.ok) throw new Error(\`HTTP error! status: \${res.status}\`);
+    const items = await res.json();
+
+    container.innerHTML = '';
+    if (!items || items.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: #6c757d;">暂无历史商家数据。</p>';
+      return;
+    }
+
+    items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.textContent = item.name;
+      btn.title = \`点击打开 \${item.name} 的领券页\`;
+      btn.onclick = () => {
+        const longUrl = \`https://abc.com/poi_id_str=\${item.shopId}\`;
+        window.open(longUrl, '_blank');
+      };
+      container.appendChild(btn);
+    });
+  } catch (error) {
+    console.error("加载历史数据失败:", error);
+    container.innerHTML = \`<p style="text-align: center; color: #dc3545;">
+      加载历史数据失败:<br>\${error.message}<br>
+      请确认 /sjq-data 接口是否可访问且 KV 已绑定。
+    </p>\`;
+  }
+}
+loadHistory();
+</script>
+</body>
+</html>
+`;
+
+
+
+
+      
 
       // 更新内存缓存
       htmlCache = html;
