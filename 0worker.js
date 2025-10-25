@@ -175,7 +175,7 @@ export default {
           </style>
         </head>
         <body>
-          <h1>商家优惠</h1>
+          
           <div id="container">
             ${buttonsHtml.join("\n")}
           </div>
