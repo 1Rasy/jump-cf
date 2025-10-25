@@ -46,107 +46,152 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
   };
 
   for (let i = 0; i <= RETRY_TIMES; i++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
 
-      const resp = await fetch(
-        'https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1',
-        { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal }
-      );
+      const resp = await fetch(
+        'https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1',
+        { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal }
+      );
 
-      clearTimeout(timeout);
+      clearTimeout(timeout);
 
-      const data = await resp.json();
+      const data = await resp.json();
 
-      let couponAmount = '无';
-      if (Array.isArray(data.infos) && data.infos.length > 0) {
-        const firstInfo = data.infos[0];
-        if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
-          const raw = firstInfo.giftInfo.coupon_amount;
-          couponAmount = couponMap[Number(raw)] || String(raw);
-        }
-      }
+      let couponAmount = '无';
+      if (Array.isArray(data.infos) && data.infos.length > 0) {
+        const firstInfo = data.infos[0];
+        if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
+          const raw = firstInfo.giftInfo.coupon_amount;
+          couponAmount = couponMap[Number(raw)] || String(raw);
+        }
+      }
 
-      // 写入 SHOP KV
-      if (env.SHOP) {
-        await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
-      }
+      // 写入 SHOP KV
+      if (env.SHOP) {
+        await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
+      }
 
-      return `${shopName} ${couponAmount}`;
-    } catch (err) {
-      if (i === RETRY_TIMES) {
-        return `${shopName} 无`;
-      }
-    }
-  }
+      return `${shopName} ${couponAmount}`;
+    } catch (err) {
+      if (i === RETRY_TIMES) {
+        return `${shopName} 无`;
+      }
+    }
+  }
 }
 
 export default {
-  async fetch(request, env) {
-    try {
-      if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
+  async fetch(request, env) {
+    try {
+      if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
 
-      const today0h1 = getTodayBeijing0h1();
+      const today0h1 = getTodayBeijing0h1();
 
-      // 如果缓存存在且未过期，直接返回
-      if (htmlCache && cacheTime > today0h1) {
-        return new Response(htmlCache, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
-      }
+      // 如果缓存存在且未过期，直接返回
+      if (htmlCache && cacheTime > today0h1) {
+        return new Response(htmlCache, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
+      }
 
-      // 获取 SJQ KV 所有 key
-      const list = await env.SJQ.list();
-      const kvItems = await Promise.all(
-        list.keys.map(async k => {
-          const shopName = await env.SJQ.get(k.name);
-          return { poi_id_str: k.name, shopName };
-        })
-      );
+      // 获取 SJQ KV 所有 key
+      const list = await env.SJQ.list();
+      const kvItems = await Promise.all(
+        list.keys.map(async k => {
+          const shopName = await env.SJQ.get(k.name);
+          return { poi_id_str: k.name, shopName };
+        })
+      );
 
-      // 判断哪些 key 需要更新（SHOP KV 没有数据）
-      const toUpdate = [];
-      for (const item of kvItems) {
-        const val = await env.SHOP.get(item.poi_id_str);
-        if (!val) toUpdate.push(item);
-      }
+      // 判断哪些 key 需要更新（SHOP KV 没有数据）
+      const toUpdate = [];
+      for (const item of kvItems) {
+        const val = await env.SHOP.get(item.poi_id_str);
+        if (!val) toUpdate.push(item);
+      }
 
-      // 并发更新
-      const updatedResults = await asyncPool(MAX_CONCURRENT_REQUESTS, toUpdate, item =>
-        fetchCoupon(item.shopName, item.poi_id_str, env)
-      );
+      // 并发更新
+      const updatedResults = await asyncPool(MAX_CONCURRENT_REQUESTS, toUpdate, item =>
+        fetchCoupon(item.shopName, item.poi_id_str, env)
+      );
 
-      // 使用 SHOP KV 生成按钮
-      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
-        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
-        const link = `https://abc.com/poi_id_str=${item.poi_id_str}`;
-        return `<button onclick="window.location.href='${link}'"
-                        style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
-                  ${text}
-                </button>`;
-      }));
+      // 使用 SHOP KV 生成按钮
+      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
+        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
+        const link = `https://abc.com/poi_id_str=${item.poi_id_str}`;
+        // 移除了内联 style，并添加了 title 属性
+        return `<button onclick="window.location.href='${link}'" title="点击打开 ${text} 的领券页">
+                  ${text}
+                </button>`;
+      }));
 
-      const html = `
-        <!DOCTYPE html>
-        <html lang="zh">
-        <head>
-          <meta charset="UTF-8">
-          <title>商家优惠列表</title>
-        </head>
-        <body>
-          <h2>商家优惠</h2>
-          ${buttonsHtml.join("\n")}
-        </body>
-        </html>
-      `;
+      // ------------------- HTML 生成部分已修改 -------------------
+      const html = `
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>商家优惠列表</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              padding: 20px;
+              max-width: 600px;
+              margin: 0 auto;
+              background-color: #f8f9fa;
+              color: #343a40;
+            }
+            h1 {
+              color: #007bff;
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            button {
+              display: block;
+              margin: 10px 0;
+              padding: 12px;
+              width: 100%;
+              background-color: #ffffff;
+              color: #343a40;
+              border: 1px solid #ced4da;
+              border-radius: 8px;
+              text-align: left;
+              cursor: pointer;
+              transition: all 0.2s;
+              font-size: 16px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            button:hover {
+              background-color: #e9ecef;
+              border-color: #007bff;
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            #container {
+              display: flex;
+              flex-direction: column;
+              gap: 10px; /* 注意：button 的 margin: 10px 0 已经提供了间距，这里的 gap 效果是叠加的，但符合您示例中 #container 的样式 */
+            }
+          </style>
+        </head>
+        <body>
+          <h1>商家优惠</h1>
+          <div id="container">
+            ${buttonsHtml.join("\n")}
+          </div>
+        </body>
+        </html>
+      `;
+      // ------------------- HTML 生成部分修改结束 -------------------
 
-      // 更新内存缓存
-      htmlCache = html;
-      cacheTime = Date.now();
+      // 更新内存缓存
+      htmlCache = html;
+      cacheTime = Date.now();
 
-      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
 
-    } catch (err) {
-      return new Response(err.toString(), { status: 500 });
-    }
-  }
+    } catch (err) {
+      return new Response(err.toString(), { status: 500 });
+    }
+  }
 };
