@@ -116,69 +116,68 @@ export default {
       );
 
     // 使用 SHOP KV 生成按钮
-      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
-        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
-        const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
-        // 移除了内联 style，并添加了 title 属性
-        return `<button onclick="window.location.href='${link}'" title="点击打开 ${text} 的领券页">
-                  ${text}
-                </button>`;
-      }));
+const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
+  const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
+  const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
+  
+  // 按钮文字左对齐，无多余空格
+  return `<button onclick="window.location.href='${link}'">${text}</button>`;
+}));
 
-      // ------------------- HTML 生成部分已修改 -------------------
-      const html = `
-        <!DOCTYPE html>
-        <html lang="zh-CN">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>商家优惠列表</title>
-          <style>
-            body {
-              font-family: 'Inter', sans-serif;
-              padding: 20px;
-              max-width: 600px;
-              margin: 0 auto;
-              background-color: #f8f9fa;
-              color: #343a40;
-            }
-            
-            button {
-              display: block;
-              margin: 10px 0;
-              padding: 12px;
-              width: 100%;
-              background-color: #ffffff;
-              color: #343a40;
-              border: 1px solid #ced4da;
-              border-radius: 8px;
-              text-align: left;
-              cursor: pointer;
-              transition: all 0.2s;
-              font-size: 16px;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-            button:hover {
-              background-color: #e9ecef;
-              border-color: #007bff;
-              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            }
-            #container {
-              display: flex;
-              flex-direction: column;
-              gap: 10px; /* 注意：button 的 margin: 10px 0 已经提供了间距，这里的 gap 效果是叠加的，但符合您示例中 #container 的样式 */
-            }
-          </style>
-        </head>
-        <body>
-          
-          <div id="container">
-            ${buttonsHtml.join("\n")}
-          </div>
-        </body>
-        </html>
-      `;
-      // ------------------- HTML 生成部分修改结束 -------------------
+// ------------------- HTML 生成部分 -------------------
+const html = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商家优惠列表</title>
+  <style>
+    body {
+      font-family: 'system-ui', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      padding: 0 16px 16px;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px 12px;
+      width: 100%;
+      background-color: #fff;
+      color: #222;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      text-align: left;        /* 明确左对齐 */
+      font-size: 16px;
+      line-height: 1.2;        /* 文字靠上一点 */
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent; /* 去除手机点击闪烁 */
+    }
+
+    /* 移除 hover、阴影等 PC 效果 */
+    button:active {
+      background-color: #f0f0f0;  /* 轻微点击反馈（手机端） */
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    ${buttonsHtml.join("\n")}
+  </div>
+</body>
+</html>
+`;
+// ------------------- HTML 生成结束 -------------------
+
 
       // 更新内存缓存
       htmlCache = html;
