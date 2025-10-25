@@ -215,7 +215,7 @@ const html = `
 
       return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
 
-    } catch (err) {
+     catch (err) {
       return new Response(err.toString(), { status: 500 });
     }
   }
