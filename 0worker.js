@@ -5,6 +5,31 @@ let htmlCache = null;
 let cacheTime = 0;
 // 映射优惠券金额到文本
 const couponMap = { 100: "8-1", 200: "10-2", 300: "12-3", 400: "13-4", 500: "15-5" };
+function getTodayBeijing0h1() {
+  const now = Date.now();
+  const beijingOffset = 8 * 60 * 60 * 1000;
+  const today0h1 = new Date(new Date(now + beijingOffset).setUTCHours(0, 1, 0, 0) - beijingOffset).getTime();
+  return today0h1;
+}
+
+async function asyncPool(limit, array, iteratorFn) {
+  const ret = [];
+  const executing = [];
+
+  for (const item of array) {
+    const p = Promise.resolve().then(() => iteratorFn(item));
+    ret.push(p);
+
+    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
+    executing.push(e);
+
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+    }
+  }
+
+  return Promise.all(ret);
+}
 
 async function fetchCoupon(shopName, poi_id_str, env) {
   const body = {lat: 22.986847,lon: 113.126331,geoType: "GCJ02",geoSource: "network",geoAccuracy: 500,mediumParams: {pageSrc2: "0c3bfd35279b4140b3bd8ecbc41301d6",pageSrc1: "CPS_SELF_OUT_SRC_H5_LINK",
@@ -34,7 +59,6 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
 
       const data = await resp.json();
 
-      // 安全提取 coupon_amount
       let couponAmount = '无';
       if (Array.isArray(data.infos) && data.infos.length > 0) {
         const firstInfo = data.infos[0];
@@ -58,35 +82,6 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
   }
 }
 
-// 并发池
-async function asyncPool(limit, array, iteratorFn) {
-  const ret = [];
-  const executing = [];
-
-  for (const item of array) {
-    const p = Promise.resolve().then(() => iteratorFn(item));
-    ret.push(p);
-
-    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
-    executing.push(e);
-
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-    }
-  }
-
-  return Promise.all(ret);
-}
-
-// 获取今天北京时间 0:01 的时间戳
-function getTodayBeijing0h1() {
-  const now = Date.now();
-  const beijingOffset = 8 * 60 * 60 * 1000;
-  const today0h1 = new Date(new Date(now + beijingOffset).setUTCHours(0, 1, 0, 0) - beijingOffset).getTime();
-  return today0h1;
-}
-
-// Worker 入口
 export default {
   async fetch(request, env) {
     try {
@@ -94,7 +89,7 @@ export default {
 
       const today0h1 = getTodayBeijing0h1();
 
-      // 如果内存缓存存在且未过期，直接返回
+      // 如果缓存存在且未过期，直接返回
       if (htmlCache && cacheTime > today0h1) {
         return new Response(htmlCache, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
       }
@@ -108,29 +103,27 @@ export default {
         })
       );
 
-      // 判断哪些 key 需要更新（内存缓存不存在或者 SHOP KV 没有数据）
+      // 判断哪些 key 需要更新（SHOP KV 没有数据）
       const toUpdate = [];
       for (const item of kvItems) {
         const val = await env.SHOP.get(item.poi_id_str);
-        if (!val) {
-          toUpdate.push(item);
-        }
+        if (!val) toUpdate.push(item);
       }
 
-      // 并发请求更新需要更新的数据
+      // 并发更新
       const updatedResults = await asyncPool(MAX_CONCURRENT_REQUESTS, toUpdate, item =>
         fetchCoupon(item.shopName, item.poi_id_str, env)
       );
 
-      // 拼接所有按钮文本，从 SHOP KV 中获取最终值
-       const buttonsHtml = results.map((text, idx) => {
-  const item = kvItems[idx];
-  return `<button onclick="window.location.href='https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100'"
-                  style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
-            ${text}
-          </button>`;
-}).join("\n");
-
+      // 使用 SHOP KV 生成按钮
+      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
+        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
+        const link = `https://abc.com/poi_id_str=${item.poi_id_str}`;
+        return `<button onclick="window.location.href='${link}'"
+                        style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
+                  ${text}
+                </button>`;
+      }));
 
       const html = `
         <!DOCTYPE html>
@@ -150,10 +143,7 @@ export default {
       htmlCache = html;
       cacheTime = Date.now();
 
-      return new Response(html, {
-        status: 200,
-        headers: { "Content-Type": "text/html;charset=UTF-8" }
-      });
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
 
     } catch (err) {
       return new Response(err.toString(), { status: 500 });
