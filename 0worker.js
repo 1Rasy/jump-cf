@@ -115,11 +115,11 @@ export default {
         fetchCoupon(item.shopName, item.poi_id_str, env)
       );
 
-      // 使用 SHOP KV 生成按钮
+     // 使用 SHOP KV 生成按钮
       const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
         const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
         const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
-        // 【修改 1】移除 title 属性，并将标签内部的文本紧凑放置，消除多余空格
+        // 保持按钮文本紧凑，确保左对齐
         return `<button onclick="window.location.href='${link}'">${text}</button>`;
       }));
 
@@ -143,7 +143,7 @@ export default {
             
             button {
               display: block;
-              margin: 10px 0;
+              margin: 10px 0; /* 【修改点】重新添加外边距，确保按钮间距 */
               padding: 12px;
               width: 100%;
               background-color: #ffffff;
@@ -153,13 +153,11 @@ export default {
               text-align: left;
               font-size: 16px;
               box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-              /* 【修改 2】移除 transition 和 cursor 属性 */
             }
-            /* 【修改 3】移除 :hover 样式 */
+            
             #container {
-              display: flex;
-              flex-direction: column;
-              gap: 10px;
+              /* 移除 flex 布局和 gap，因为 button 已经有 margin 了，避免双重间距 */
+              /* 如果保留 flex，请将 gap: 0 或删除 gap 属性 */
             }
           </style>
         </head>
