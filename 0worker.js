@@ -1,3 +1,4 @@
+
 const MAX_CONCURRENT_REQUESTS = 12; // 并行请求数量
 const RETRY_TIMES = 2; // 出错重试次数
 
@@ -127,16 +128,13 @@ export default {
         // 更新缓存信息
         cachedSJQCount = kvItems.length;
         cacheTime = Date.now();
-        htmlCache = await generateHTML(env, reskvItems);
+        htmlCache = await generateHTML(env, kvItems);
       }
 
       // 返回缓存
       return new Response(htmlCache, {
         status: 200,
-        headers: {"Content-Type": "text/html;charset=UTF-8",
-    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0" }
+        headers: { "Content-Type": "text/html;charset=UTF-8" }
       });
     } catch (err) {
       return new Response(err.message || 'Error', { status: 500 });
@@ -145,7 +143,7 @@ export default {
 };
 
 
-    // 使用 SHOP KV 生成按钮
+    // 使用 SHOP KV 生成按钮
 const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
   const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
   const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
@@ -209,14 +207,14 @@ const html = `
 // ------------------- HTML 生成结束 -------------------
 
 
-      // 更新内存缓存
-      htmlCache = html;
-      cacheTime = Date.now();
+      // 更新内存缓存
+      htmlCache = html;
+      cacheTime = Date.now();
 
-      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
 
-     catch (err) {
-      return new Response(err.toString(), { status: 500 });
-    }
-  }
+    } catch (err) {
+      return new Response(err.toString(), { status: 500 });
+    }
+  }
 };
