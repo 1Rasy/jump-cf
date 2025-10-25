@@ -142,12 +142,7 @@ export default {
               background-color: #f8f9fa;
               color: #343a40;
             }
-            /*
-            h1 {
-              color: #007bff;
-              text-align: center;
-              margin-bottom: 20px;
-            }*/
+            
             button {
               display: block;
               margin: 10px 0;
@@ -176,7 +171,7 @@ export default {
           </style>
         </head>
         <body>
-          /*<h1>商家优惠</h1>*/
+       
           <div id="container">
             ${buttonsHtml.join("\n")}
           </div>
