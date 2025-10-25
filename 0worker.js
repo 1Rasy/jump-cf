@@ -84,6 +84,22 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // ✅ 新增：提供 /sjq-data 接口，用于前端读取历史数据
+    if (url.pathname === "/sjq-data") {
+      if (!env.SJQ) {
+        return new Response("SJQ KV not bound", { status: 500 });
+      }
+      const list = await env.SJQ.list();
+      const kvData = {};
+      for (const key of list.keys) {
+        kvData[key.name] = await env.SJQ.get(key.name);
+      }
+      return new Response(JSON.stringify(kvData), {
+        headers: { "Content-Type": "application/json;charset=UTF-8" },
+      });
+    }
     try {
       if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
 
