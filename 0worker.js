@@ -127,13 +127,16 @@ export default {
         // 更新缓存信息
         cachedSJQCount = kvItems.length;
         cacheTime = Date.now();
-        htmlCache = await generateHTML(env, kvItems);
+        htmlCache = await generateHTML(env, reskvItems);
       }
 
       // 返回缓存
       return new Response(htmlCache, {
         status: 200,
-        headers: { "Content-Type": "text/html;charset=UTF-8" }
+        headers: {"Content-Type": "text/html;charset=UTF-8",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0" }
       });
     } catch (err) {
       return new Response(err.message || 'Error', { status: 500 });
