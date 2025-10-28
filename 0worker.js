@@ -8,13 +8,6 @@ let cachedSJQCount = 0; // 缓存 SJQ 条数
 // 映射优惠券金额到文本
 const couponMap = { 100: "8-1", 200: "10-2", 300: "12-3", 400: "13-4", 500: "15-5" };
 
-// 获取今天北京时间 0:01 的时间戳（已不再用于每日更新，仅保留备用）
-function getTodayBeijing0h1() {
-  const now = Date.now();
-  const beijingOffset = 8 * 60 * 60 * 1000;
-  return new Date(new Date(now + beijingOffset).setUTCHours(0, 1, 0, 0) - beijingOffset).getTime();
-}
-
 // 并发池
 async function asyncPool(limit, array, iteratorFn) {
   const ret = [];
@@ -66,16 +59,29 @@ async function fetchCoupon(shopName, poi_id_str, env) {
   }
 }
 
-// 根据 SHOP KV 生成 HTML
+// 根据 SHOP KV 生成 HTML（带优惠金额排序）
 async function generateHTML(env, kvItems) {
-  const buttonsHtml = await Promise.all(
+  // 先读取 KV 并附加 couponValue，用于排序
+  const itemsWithCoupon = await Promise.all(
     kvItems.map(async (item) => {
       const val = await env.SHOP.get(item.poi_id_str);
       const text = val || `${item.shopName} 无`;
-      const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
-      return `<button onclick="window.location.href='${link}'">${text}</button>`;
+
+      // 提取优惠金额数字
+      const match = text.match(/(\d+)-\d+/);
+      const couponValue = match ? Number(match[1]) : -1; // 无优惠为 -1
+      return { ...item, text, couponValue };
     })
   );
+
+  // 按优惠金额从大到小排序，无优惠排最后
+  itemsWithCoupon.sort((a, b) => b.couponValue - a.couponValue);
+
+  // 生成按钮 HTML
+  const buttonsHtml = itemsWithCoupon.map((item) => {
+    const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
+    return `<button onclick="window.location.href='${link}'">${item.text}</button>`;
+  });
 
   return `
 <!DOCTYPE html>
@@ -86,7 +92,7 @@ async function generateHTML(env, kvItems) {
 <title>商家优惠列表</title>
 <style>
 body {
-  font-family: 'system-ui', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: system-ui, sans-serif;
   padding: 0 16px 16px;
   max-width: 600px;
   margin: 0 auto;
@@ -117,6 +123,7 @@ button:active { background-color: #f0f0f0; }
 </body>
 </html>`;
 }
+
 
 // ------------------- Worker 主体 -------------------
 export default {
