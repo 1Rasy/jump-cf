@@ -24,8 +24,12 @@ async function asyncPool(limit, array, iteratorFn) {
 
 // 获取优惠券并更新 SHOP KV
 async function fetchCoupon(shopName, poi_id_str, env) {
-  const body = JSON.parse(env.BODY);
-  const headers = JSON.parse(env.HEADERS);
+  
+  const bodyTemplate = env.BODY;              // 从环境变量取
+const headers = JSON.parse(env.HEADERS);   // 从环境变量取并解析
+const body = bodyTemplate.replace("__POI_ID__", poi_id_str);
+
+
 
   for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
