@@ -183,7 +183,7 @@ export default {
       const sjqItems = [];
 
       for (const k of list.keys || []) {
-        const v = await env.SJQ.get(k.name, { type: "json" });
+        const v = await env.SJQ.get(k.name);
         if (v && v.shopName && v.poi_id_str) sjqItems.push(v);
       }
 
