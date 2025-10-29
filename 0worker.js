@@ -83,7 +83,7 @@ async function generateHTML(env, kvItems) {
 <title>商家优惠列表</title>
 <style>
 body { font-family: system-ui, sans-serif; padding: 0 16px 16px; max-width: 600px; margin: 0 auto; background-color: #f8f9fa; color: #333; }
-button { display: block; margin: 10px 0; padding: 10px 12px; width: 100%; background-color: #fff; color: #222; border: 1px solid #ddd; border-radius: 6px; text-align: left; font-size: 16px; line-height: 1.2; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button { display: block; margin: 6px 0; padding: 10px 12px; width: 100%; background-color: #fff; color: #222; border: 1px solid #ddd; border-radius: 6px; text-align: left; font-size: 16px; line-height: 1.2; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:active { background-color: #f0f0f0; }
 #container { display: flex; flex-direction: column; }
 </style>
