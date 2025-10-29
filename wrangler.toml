@@ -17,7 +17,7 @@ binding = "TIME"
 id = "1e7292b9c35144a4b60d594143d71ba4"
 
 [triggers]
-crons = ["*/10 * * * *" ]
+crons = ["*/5 * * * *" ]
 
 [observability]
 [observability.logs]
