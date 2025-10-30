@@ -1,7 +1,5 @@
-const MAX_CONCURRENT_REQUESTS = 12; // 并行请求数量
-const RETRY_TIMES = 2; // 出错重试次数
-
-// 映射优惠券金额到文本
+const MAX_CONCURRENT_REQUESTS = 12;
+const RETRY_TIMES = 2;
 const couponMap = { 100: "8-1", 200: "10-2", 300: "12-3", 400: "13-4", 500: "15-5" };
 
 // 并发池
@@ -11,9 +9,14 @@ async function asyncPool(limit, array, iteratorFn) {
   for (const item of array) {
     const p = Promise.resolve().then(() => iteratorFn(item));
     ret.push(p);
-    const e = p.then(() => executing.splice(executing.indexOf(e), 1));
-    executing.push(e);
-    if (executing.length >= limit) await Promise.race(executing);
+    executing.push(p);
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+      // 移除已完成的 promise
+      for (let i = executing.length - 1; i >= 0; i--) {
+        if (executing[i].status === "fulfilled") executing.splice(i, 1);
+      }
+    }
   }
   return Promise.all(ret);
 }
@@ -69,7 +72,7 @@ export default {
       const existing = await env.SHOP.list({ limit: 1000 });
       if (existing.keys.length > 0) {
         console.log("🧹 正在清空 SHOP KV，共", existing.keys.length, "条...");
-        await asyncPool(MAX_CONCURRENT_REQUESTS, existing.keys, (k) => env.SHOP.delete(k.name));
+        await Promise.all(existing.keys.map((k) => env.SHOP.delete(k.name)));
         console.log("✅ SHOP KV 已清空");
       } else {
         console.log("📭 SHOP KV 本为空，无需清理");
@@ -77,17 +80,14 @@ export default {
 
       // ② 从 SJQ 获取商家列表
       const list = await env.SJQ.list({ limit: 1000 });
-      const kvItems = await Promise.all(
-        list.keys.map(async (k) => {
-          const shopName = await env.SJQ.get(k.name);
-          return { poi_id_str: k.name, shopName };
-        })
-      );
+      const kvItems = [];
+      for (const k of list.keys) {
+        const shopName = await env.SJQ.get(k.name);
+        if (shopName) kvItems.push({ poi_id_str: k.name, shopName });
+      }
 
       // ③ 并发抓取并写入新的 SHOP 数据
-      await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, (item) =>
-        fetchCoupon(item.shopName, item.poi_id_str, env)
-      );
+      await Promise.all(kvItems.map((item) => fetchCoupon(item.shopName, item.poi_id_str, env)));
 
       const duration = ((Date.now() - start) / 1000).toFixed(1);
       console.log(`✅ 定时更新完成，共处理 ${kvItems.length} 条商家数据，用时 ${duration}s。`);
