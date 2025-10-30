@@ -124,7 +124,11 @@ export default {
       "⏰ Cron 触发于:",
       new Date(event.scheduledTime).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })
     );
-
+console.log("TIME 更新开始");
+const shopData = await env.SHOP.get("xxx");
+console.log("SHOP 当前内容:", shopData);
+await env.TIME.put("latest_html", shopData);
+console.log("TIME 已更新");
     try {
       const list = await env.SJQ.list({ limit: 1000 });
       const kvItems = await Promise.all(
