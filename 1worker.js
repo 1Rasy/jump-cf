@@ -56,6 +56,13 @@ async function fetchCoupon(shopName, poi_id_str, env) {
       if (i === RETRY_TIMES) return `${shopName} 无`;
     }
   }
+  try {
+  await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
+  console.log(`✅ 写入 SHOP KV 成功: ${poi_id_str} -> ${shopName} ${couponAmount}`);
+} catch (err) {
+  console.error(`❌ 写入 SHOP KV 失败: ${poi_id_str}`, err);
+}
+
 }
 
 // ------------------- Worker 主体 -------------------
