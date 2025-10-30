@@ -25,8 +25,7 @@ async function asyncPool(limit, array, iteratorFn) {
 async function fetchCoupon(shopName, poi_id_str, env) {
   const url = "https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1";
 
-  const body = {
-    lat: 22.980762,
+  const body = {  lat: 22.980762,
     lon: 113.103535,
     geoType: "GCJ02",
     geoSource: "network",
@@ -58,9 +57,7 @@ async function fetchCoupon(shopName, poi_id_str, env) {
     phone: "",
     categoryTypeList: ["0"],
     channelType: "SELF",
-    riskParams: { fpPlatform: 5 }
-  };
-
+    riskParams: { fpPlatform: 5 } };
   const headers = {
     'cookie': 'WEBDFPID=z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0-1761941997649-1745664039919UGIKMYI868c0ee73ab28e1d0b03bc83148500061008;_lxsdk_s=19a36c6e9b0-85d-6f8-46d%7C%7C15;wm_ado_ge_e_k=yV9z57djWtciJhM4%2FQQykpF%2B6V03YdJ%2F38pS4kj0owizOSzW5WaJY7SOvw4o%2BVpK;logan_session_token=o9b3cpnvultw5ctmxxw1;utm_source_rg=AM%25oeVwZwZ%25462;iuuid=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39;wm_ado_ge_x=2QIEE%2BVvVKxpBXOe%2BAR86mRXV%2BdSNRpkhVmxK1Ms3zfT6ivprLZ7LTFctmazeQI1tIxv92KMQtDrhq86RpiC4ccipLut3jn63FoqfSWCXU%2FJG1zWE0ReHlRLEcyg47mZime3DqC03pOK3Tvw3EFhNlqhX6lkd%2BsekQsFsGFWu1VfEy0wX7gu57C8ASgiAnyfS3UAqhhvmOrL3%2Bl3wc973zP3ejTbL9biQU9Xz%2B2lLIw%3D;com.sankuai.wmdadoutsite.fe_random=_63.0;mt_c_token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM;oops=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM;token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM;userId=2611035973;_lxsdk_cuid=19671af5c41c8-00002ff28e816c-7c6f3d58-505c8-19671af5c41c8;_lxsdk=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39',
     'referer': 'https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?recallBizId=cpsH5Coupon&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&scene=CPS_SELF_SRC&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&activityId=6&poi_id_str=${poi_id_str}&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&outActivityId=6&hoaePageV=8&p=1016502508465025024',
@@ -86,7 +83,7 @@ async function fetchCoupon(shopName, poi_id_str, env) {
     'accept': '*/*',
     'origin': 'https://offsiteact.meituan.com',
     'sec-fetch-mode': 'cors',
-  };
+};
 
   for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
@@ -113,22 +110,13 @@ async function fetchCoupon(shopName, poi_id_str, env) {
         }
       }
 
-      if (env.SHOP) await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
-      return `${shopName} ${couponAmount}`;
-    } catch (err) {
-      if (i === RETRY_TIMES) return `${shopName} 无`;
-    }
-  }
-}
-
-
       // ✅ 写入 KV 并打印日志
       if (env.SHOP) {
         await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
         console.log(`✅ 写入 SHOP KV 成功: ${poi_id_str} -> ${shopName} ${couponAmount}`);
       }
 
-      return `${shopName} ${couponAmount}`; // 循环内 return，写入完成
+      return `${shopName} ${couponAmount}`;
     } catch (err) {
       if (i === RETRY_TIMES) {
         console.error(`❌ 写入 SHOP KV 失败: ${poi_id_str} -> ${shopName}`, err);
@@ -137,6 +125,7 @@ async function fetchCoupon(shopName, poi_id_str, env) {
     }
   }
 }
+
 
 // ------------------- Worker 主体 -------------------
 export default {
