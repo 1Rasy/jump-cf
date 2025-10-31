@@ -62,25 +62,30 @@ export default {
       });
 
       try {
-        const res = await fetch(url, { method: "POST", headers, body });
-        const text = await res.text();
+  const res = await fetch(url, { method: "POST", headers, body });
+  const text = await res.text();
 
-        console.log(`✅ [${shopName}] 响应前100字: ${text.slice(0, 100)}`);
+  console.log(`✅ [${shopName}] 响应前100字: ${text.slice(0, 100)}`);
 
-        let couponAmount = "无";
-        try {
-          // 尝试解析 JSON（可能是 JSONP）
-          const json = JSON.parse(text.replace(/^jsonpWXLoader\(|\)$/g, ""));
-          if (Array.isArray(json.infos) && json.infos.length > 0) {
-            const firstInfo = json.infos[0];
-            if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
-              const raw = firstInfo.giftInfo.coupon_amount;
-              couponAmount = couponMap[Number(raw)] || String(raw);
-            }
-          }
-        } catch (e) {
-          console.log(`⚠️ [${shopName}] JSON解析失败`);
-        }
+  let couponAmount = "无";
+  try {
+    // 尝试解析 JSON（可能是 JSONP）
+    const json = JSON.parse(text.replace(/^jsonpWXLoader\(|\)$/g, ""));
+    if (Array.isArray(json.infos) && json.infos.length > 0) {
+      const firstInfo = json.infos[0];
+      if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
+        const raw = firstInfo.giftInfo.coupon_amount;
+        couponAmount = couponMap[Number(raw)] || String(raw);
+      }
+    }
+  } catch (e) {
+    console.log(`⚠️ [${shopName}] JSON解析失败`);
+  }
+
+  // 👇 这一行是你少的！补上它结束外层 try
+} catch (err) {
+  console.log(`❌ [${shopName}] 请求失败:`, err);
+}
 
         // 写入 SHOP KV
         const newKey = `${shopName} ${couponAmount}`;
