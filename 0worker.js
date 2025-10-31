@@ -75,7 +75,7 @@ async function processShopData(shopName, poi_id_str, logBuffer) {
             poi_id_str: poi_id_str, 
             mediumSrc1: "0c3bfd35279b4140b3bd8ecbc41301d6",
             outActivityId: "6",
-            p: 1016502508465025024
+            p: 1016502508465025024，
             mediaPvId: "dafkdsajffjafdfs",
             mediaUserId: "10086",
             bizId: "0c3bfd35279b4140b3bd8ecbc41301d6",
