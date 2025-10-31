@@ -1,4 +1,5 @@
 const API_URL = "https://offsiteact.meituan.com/act/ge/queryPoiByRecallBiz?yodaReady=h5&csecplatform=4&csecversion=4.1.1";
+// P 值已在 Header 和 Body 中写死为 "1016502508465025024"
 
 /**
  * 提取关键信息 (优惠券金额) 的逻辑
@@ -27,41 +28,52 @@ function extractCouponAmount(data) {
  */
 async function processShopData(shopName, poi_id_str, logBuffer) {
     const now = Date.now(); // 动态时间戳，用于 mtgsig.a2
-    
-    // 1. 动态生成 Referer 
-    const referer = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
+    const fixedPValue = "1016502508465025024";
 
-    // 2. 构造完整的 Headers
-    const mtgsigObject = { 
-        a1: "1.2", 
+    // --- 1. 动态生成 Referer (嵌入 poi_id_str) ---
+    // 根据最新抓包数据，Referer 中包含 poi_id_str
+    const referer = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=${fixedPValue}&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
+
+    // --- 2. 构造完整的 Headers ---
+    const mtgsigObject = {
+        a1: "1.2",
         a2: now, // 动态时间戳
-        a3: "z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0-1761257513891-1745664039919UGIKMYI868c0ee73ab28e1d0b03bc83148500061008", 
-        a5: "oVjAOcgNjj6drqWh0Ubeyg4KnNi785b5e/t6eKkotxd350Tc3Vi86EzVWQhAMkrJ37bU7EJE4Nb/xv36wzkdq4bU0mZ8mEZ1XLes3W4K691QgiSjpcTgL1mAMqwORW==", 
-        a6: "h1.9gWg/ByL6/Q+dkFaG52FW+tgwc3rraYxeTD9Vs6LQUpEzdcQ+APN9Xyy/w9Er0olxFSqAMXz+oCrASX0gIPpm4cPDGeBY0UbNJOzmydKSBAKOt6c1YHQyl/fZYtMWkH+wzXsANLR/c88rvspt+RemdcNrcis+SDhKS3itQVkJvC/YJhXgRV937wIf3TSc+uoKoVesVD8sVhgvC3FGeQ7M51+z+G1piZkFFtlXPVQLp8g=", 
-        a8: "470b09d42a36b46fae88765f3ad8858f", 
-        a9: "4.1.1,7,195", 
-        a10: "28", 
-        x0: 4, 
-        d1: "6f961e29be5a92d1eb8b5a5dd1cc8cf6" 
+        a3: "z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0",
+        a5: "ATfLIFpacz+vv//e5l7miU1e/rmDWdybEPYA+Br0z1gFXJbIv+5RaVU9Yv4NCZV/ax2UM8F+BRWENrypvVdJyII8SgkBat3qlLYfSN9AFQKqNGLkP2GzXKZXGCm0gZ==", // 更新
+        a6: "h1.9TGmgkIok7Z/iFN6TFOvr+U//V899TXJ7gkqIzsCUQvfuv8CL8ijYg+JWirC2I8M2BfBgvORoaOmvVGete3Pakd8EmZ2PL4tmsZmg2/b+C7zXJ+biOqrDON5B55rKjy1YiV2YMA77/4bbz8rAMcmwtst0QNyLnTNOMP22XS9P5Jzbnbb2oBcItf5R8C9tm7h0BqFohnxphihe7oqflBGAbtm3uiyCsGFLd2GG1eeEBic=", // 更新
+        a8: "5959fb0a47997a810e810ab4c5803622", // 更新
+        a9: "4.1.1,7,22", // 更新
+        a10: "ac", // 更新
+        x0: 4,
+        d1: "69b05e8e0028a2cf6b031a336998fc4c" // 更新
     };
+    
+    // Cookie 格式化为字符串 (基于您提供的最新数据)
+    const cookieString = "WEBDFPID=z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0-1762028463798-1745664039919UGIKMYI868c0ee73ab28e1d0b03bc83148500061008; _lxsdk_s=19a3bee48b8-a60-86c-838%7C%7C7; logan_session_token=p30097ad0h65azsxtbsv; utm_source_rg=AM%25e20O2O2%25506; wm_ado_ge_e_k=yV9z57djWtciJhM4%2FQQykpF%2B6V03YdJ%2F38pS4kj0owizOSzW5WaJY7SOvw4o%2BVpK; iuuid=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39; wm_ado_ge_x=2QIEE%2BVvVKxpBXOe%2BAR86mRXV%2BdSNRpkhVmxK1Ms3zfT6ivprLZ7LTFctmazeQI1tIxv92KMQtDrhq86RpiC4ccipLut3jn63FoqfSWCXU%2FJG1zWE0ReHlRLEcyg47mZime3DqC03pOK3Tvw3EFhNlqhX6lkd%2BsekQsFsGFWu1VfEy0wX7gu57C8ASgiAnyfS3UAqhhvmOrL3%2Bl3wc973zP3ejTbL9biQU9Xz%2B2lLIw%3D; com.sankuai.wmdadoutsite.fe_random=_63.0; mt_c_token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; oops=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; userId=2611035973; _lxsdk_cuid=19671af5c41c8-00002ff28e816c-7c6f3d58-505c8-19671af5c41c8; _lxsdk=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39";
+
 
     const headers = {
-        'origin': 'https://offsiteact.meituan.com',
+        // 将 Headers 重新排序并使用最新值
+        'mtgsig': JSON.stringify(mtgsigObject),
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
         'accept-encoding': 'gzip, deflate, br',
+        'sec-fetch-dest': 'empty',
+        'content-type': 'application/json;charset=utf-8',
         'accept': '*/*',
-        'referer': referer, // 动态 Referer
         'sec-fetch-mode': 'cors',
+        'cookie': cookieString, 
+        'referer': referer, // 动态 Referer
+        'priority': 'u=3, i',
         'sec-fetch-site': 'same-origin',
         'accept-language': 'zh-CN,zh-Hans;q=0.9',
-        
-        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
-        'content-type': 'application/json;charset=utf-8'
+        'origin': 'https://offsiteact.meituan.com',
+        // 'content-length' 不需要，fetch API 会自动处理
     };
 
-    // 3. 构造 Body (p 值固定，poi_id_str 动态)
-    const body = {
-        lat: 22.986847,
-        lon: 113.126331,
+    // --- 3. 构造 Body (嵌入 poi_id_str) ---
+    const bodyObject = {
+        lat: 22.980764, // 使用最新抓包的坐标
+        lon: 113.103541, // 使用最新抓包的坐标
         geoType: "GCJ02",
         geoSource: "network",
         geoAccuracy: 500,
@@ -71,10 +83,10 @@ async function processShopData(shopName, poi_id_str, logBuffer) {
             pageSrc3: "e15d0d4258004ba5b44c1c85e4db4084",
             scene: "CPS_SELF_SRC",
             activityId: "6",
-            poi_id_str: poi_id_str, 
+            poi_id_str: poi_id_str, // 动态 poi_id_str
             mediumSrc1: "0c3bfd35279b4140b3bd8ecbc41301d6",
             outActivityId: "6",
-            p: "1016502508465025024",
+            p: fixedPValue, // 固定 P 值
             mediaPvId: "dafkdsajffjafdfs",
             mediaUserId: "10086",
             bizId: "0c3bfd35279b4140b3bd8ecbc41301d6",
@@ -83,35 +95,33 @@ async function processShopData(shopName, poi_id_str, logBuffer) {
         },
         appContainer: "UNKNOW",
         rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",
-        pagePvId: "e97e858c-34b8-4a40-aeb3-50ae9f178403",
-        pageSessionId: "efa9df7e-3b74-4305-891b-6c0a8daa5438",
+        pagePvId: "8e2aaa48-20a1-46b1-a4b2-cdd21e9a3bfc", // 更新
+        pageSessionId: "0f3b463a-cd60-4767-a344-67346c2e654e", // 更新
         outerPvId: "",
         contentPvId: "",
-        recallBizId: "cpsSelfCouponAll",
+        recallBizId: "cpsEverDayCoupon", // 更新
         pageNo: 1,
         hasMore: true,
         phone: "",
-        categoryTypeList: ["0"],
         channelType: "SELF",
         riskParams: { fpPlatform: 5 }
     };
 
+    // --- 4. 发起请求、解析与 KV 写入 ---
     try {
         const fetchOptions = {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify(body),
-            redirect: 'follow' 
+            body: JSON.stringify(bodyObject),
+            redirect: 'follow'
         };
-        
+
         logBuffer.push(`--- Shop: ${shopName} ---`);
         logBuffer.push(`POI_ID: ${poi_id_str}`);
 
         const response = await fetch(API_URL, fetchOptions);
-        
-        // 读取响应体，用于日志和解析
         const responseText = await response.text();
-        
+
         // 打印响应体的前100位，用于验证
         logBuffer.push(`API Response (Head 100): ${responseText.substring(0, 100)}...`);
 
@@ -124,13 +134,13 @@ async function processShopData(shopName, poi_id_str, logBuffer) {
             };
         }
 
-        const jsonResponse = JSON.parse(responseText); // 使用已读取的文本
+        const jsonResponse = JSON.parse(responseText);
         const couponAmount = extractCouponAmount(jsonResponse);
 
-        // 4. 构造新的 Key/Value 并写入 SHOP KV 库
+        // 构造新的 Key/Value 并写入 SHOP KV 库
         const newKey = `${shopName} ${couponAmount}`;
         const newValue = poi_id_str;
-        
+
         await SHOP.put(newKey, newValue);
 
         // 记录写入日志
@@ -162,48 +172,46 @@ addEventListener('fetch', event => {
 
 async function handleRequest(request) {
     const results = [];
-    const logBuffer = []; // 存储所有日志信息
-    let list_cursor; 
+    const logBuffer = [];
+    let list_cursor;
 
     logBuffer.push('--- Starting KV Processing ---');
 
     try {
-        // 循环遍历 SJQ KV 库
+        // 确保 Worker 不超时，限制每批次处理数量
         while (true) {
-            // 1. 列出当前批次的 Key
-            const list = await SJQ.list({ limit: 50, cursor: list_cursor }); // 限制批次大小以防超时
-            
-            // 2. 批量获取 Key 对应的 Value (poi_id_str)
+            const list = await SJQ.list({ limit: 50, cursor: list_cursor });
+
+            if (list.keys.length === 0) {
+                break;
+            }
+
+            // 批量获取 Key 对应的 Value (poi_id_str)
             const getPromises = list.keys.map(keyInfo => SJQ.get(keyInfo.name));
             const poi_id_strs = await Promise.all(getPromises);
 
-            // 3. 构造请求任务，并传入 logBuffer
-            const shopPromises = list.keys.map((keyInfo, index) => 
+            // 构造请求任务，并传入 logBuffer
+            const shopPromises = list.keys.map((keyInfo, index) =>
                 processShopData(keyInfo.name, poi_id_strs[index], logBuffer)
             );
 
-            // 等待所有 API 请求完成
             const batchResults = await Promise.all(shopPromises);
             results.push(...batchResults);
 
-            // 检查是否还有更多数据
             if (list.list_complete) {
                 break;
             }
             list_cursor = list.cursor;
         }
 
-        // 汇总结果
         const successCount = results.filter(r => r.status === 'Success').length;
         const totalCount = results.length;
         logBuffer.push(`--- Finished Processing ---`);
         logBuffer.push(`Total Shops: ${totalCount}, Successful Writes: ${successCount}`);
 
-
-        // 最终返回给用户的响应
         return new Response(JSON.stringify({
             message: `KV 处理完成。总计：${totalCount} 个商家，成功写入 SHOP KV：${successCount} 个。`,
-            log: logBuffer, // 返回所有记录的日志
+            log: logBuffer,
             summary: results
         }, null, 2), {
             headers: { 'Content-Type': 'application/json;charset=utf-8' },
@@ -211,11 +219,11 @@ async function handleRequest(request) {
 
     } catch (error) {
         logBuffer.push(`FATAL Worker Error: ${error.message}`);
-        return new Response(JSON.stringify({ 
-            error: 'Worker 运行时错误', 
+        return new Response(JSON.stringify({
+            error: 'Worker 运行时错误',
             detail: error.message,
             log: logBuffer
-        }, null, 2), { 
+        }, null, 2), {
             status: 500,
             headers: { 'Content-Type': 'application/json;charset=utf-8' },
         });
