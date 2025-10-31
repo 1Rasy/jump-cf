@@ -62,6 +62,8 @@ export default {
       channelType: "SELF",
       riskParams: { fpPlatform: 5 }
     });
+console.log(`[${shopName}] 请求体:`, body);
+console.log(`[${shopName}] 请求头:`, headers);
 
       try {
         const res = await fetch(url, { method: "POST", headers, body });
