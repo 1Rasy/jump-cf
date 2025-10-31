@@ -9,7 +9,7 @@ export default {
       'accept-language': 'zh-CN,zh-Hans;q=0.9',
       'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
       'accept': '*/*',
-      'mtgsig': '{"a1":"1.2","a2":1761942101596,"a3":"z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0","a5":"ATfLIFpacz+vv//e5l7miU1e/rmDWdybEPYA+Br0z1gFXJbIv+5RaVU9Yv4NCZV/ax2UM8F+BRWENrypvVdJyII8SgkBat3qlLYfSN9AFQKqNGLkP2GzXKZXGCm0gZ==","a6":"h1.9TGmgkIok7Z/iFN6TFOvr+U//V899TXJ7gkqIzsCUQvfuv8CL8ijYg+JWirC2I8M2BfBgvORoaOmvVGete3Pakd8EmZ2PL4tmsZmg2/b+C7zXJ+biOqrDON5B55rKjy1YiV2YMA77/4bbz8rAMcmwtst0QNyLnTNOMP22XS9P5Jzbnbb2oBcItf5R8C9tm7h0BqFohnxphihe7oqflBGAbtm3uiyCsGFLd2GG1eeEBic=","a8":"5959fb0a47997a810e810ab4c5803622","a9":"4.1.1,7,22","a10":"ac","x0":4,"d1":"69b05e8e0028a2cf6b031a336998fc4c"}',
+      'mtgsig': '{"a1":"1.2","a2":date.now(),"a3":"z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0","a5":"ATfLIFpacz+vv//e5l7miU1e/rmDWdybEPYA+Br0z1gFXJbIv+5RaVU9Yv4NCZV/ax2UM8F+BRWENrypvVdJyII8SgkBat3qlLYfSN9AFQKqNGLkP2GzXKZXGCm0gZ==","a6":"h1.9TGmgkIok7Z/iFN6TFOvr+U//V899TXJ7gkqIzsCUQvfuv8CL8ijYg+JWirC2I8M2BfBgvORoaOmvVGete3Pakd8EmZ2PL4tmsZmg2/b+C7zXJ+biOqrDON5B55rKjy1YiV2YMA77/4bbz8rAMcmwtst0QNyLnTNOMP22XS9P5Jzbnbb2oBcItf5R8C9tm7h0BqFohnxphihe7oqflBGAbtm3uiyCsGFLd2GG1eeEBic=","a8":"5959fb0a47997a810e810ab4c5803622","a9":"4.1.1,7,22","a10":"ac","x0":4,"d1":"69b05e8e0028a2cf6b031a336998fc4c"}',
     };
 
     const body = JSON.stringify({
