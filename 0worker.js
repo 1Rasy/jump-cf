@@ -18,74 +18,47 @@ export default {
 
       // 构造请求头和 body
       const headers = {
-        'referer': `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100',
-        'origin': 'https://offsiteact.meituan.com',
-      'accept-language': 'zh-CN,zh-Hans;q=0.9',
-      'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1',
-      'accept': '*/*'
+        'referer': `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?poi_id_str=${poi_id_str}`,
+        'content-type': 'application/json;charset=utf-8',
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X)',
+        'accept': '*/*'
       };
 
       const body = JSON.stringify({
-         lat: 22.980764,
-      lon: 113.103541,
-      geoType: "GCJ02",
-      geoSource: "network",
-      geoAccuracy: 500,
-      mediumParams: {
-        pageSrc2: "0c3bfd35279b4140b3bd8ecbc41301d6",
-        pageSrc1: "CPS_SELF_OUT_SRC_H5_LINK",
-        pageSrc3: "e15d0d4258004ba5b44c1c85e4db4084",
-        scene: "CPS_SELF_SRC",
-        activityId: "6",
-        poi_id_str: "4gRpe9XGOibD_PxlNzSaIQI",
-        mediumSrc1: "0c3bfd35279b4140b3bd8ecbc41301d6",
-        outActivityId: "6",
-        p: "1016502508465025024",
-        mediaPvId: "dafkdsajffjafdfs",
-        mediaUserId: "10086",
-        bizId: "0c3bfd35279b4140b3bd8ecbc41301d6",
-        callback: "jsonpWXLoader",
-        poiId: "-100"
-      },
-      appContainer: "UNKNOW",
-      rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",
-      pagePvId: "8e2aaa48-20a1-46b1-a4b2-cdd21e9a3bfc",
-      pageSessionId: "0f3b463a-cd60-4767-a344-67346c2e654e",
-      outerPvId: "",
-      contentPvId: "",
-      recallBizId: "cpsEverDayCoupon",
-      pageNo: 1,
-      hasMore: true,
-      phone: "",
-      channelType: "SELF",
-      riskParams: { fpPlatform: 5 }
+        lat: 22.980764,
+        lon: 113.103541,
+        geoType: "GCJ02",
+        geoSource: "network",
+        geoAccuracy: 500,
+        mediumParams: { poi_id_str },
+        appContainer: "UNKNOW",
+        recallBizId: "cpsEverDayCoupon",
+        pageNo: 1,
+        hasMore: true,
+        channelType: "SELF",
+        riskParams: { fpPlatform: 5 }
       });
 
       try {
-  const res = await fetch(url, { method: "POST", headers, body });
-  const text = await res.text();
+        const res = await fetch(url, { method: "POST", headers, body });
+        const text = await res.text();
 
-  console.log(`✅ [${shopName}] 响应前100字: ${text.slice(0, 100)}`);
+        console.log(`✅ [${shopName}] 响应前100字: ${text.slice(0, 100)}`);
 
-  let couponAmount = "无";
-  try {
-    // 尝试解析 JSON（可能是 JSONP）
-    const json = JSON.parse(text.replace(/^jsonpWXLoader\(|\)$/g, ""));
-    if (Array.isArray(json.infos) && json.infos.length > 0) {
-      const firstInfo = json.infos[0];
-      if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
-        const raw = firstInfo.giftInfo.coupon_amount;
-        couponAmount = couponMap[Number(raw)] || String(raw);
-      }
-    }
-  } catch (e) {
-    console.log(`⚠️ [${shopName}] JSON解析失败`);
-  }
-
-  // 👇 这一行是你少的！补上它结束外层 try
-} catch (err) {
-  console.log(`❌ [${shopName}] 请求失败:`, err);
-}
+        let couponAmount = "无";
+        try {
+          // 尝试解析 JSON（可能是 JSONP）
+          const json = JSON.parse(text.replace(/^jsonpWXLoader\(|\)$/g, ""));
+          if (Array.isArray(json.infos) && json.infos.length > 0) {
+            const firstInfo = json.infos[0];
+            if (firstInfo.giftInfo && firstInfo.giftInfo.coupon_amount != null) {
+              const raw = firstInfo.giftInfo.coupon_amount;
+              couponAmount = couponMap[Number(raw)] || String(raw);
+            }
+          }
+        } catch (e) {
+          console.log(`⚠️ [${shopName}] JSON解析失败`);
+        }
 
         // 写入 SHOP KV
         const newKey = `${shopName} ${couponAmount}`;
