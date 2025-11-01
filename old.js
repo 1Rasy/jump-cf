@@ -1,17 +1,21 @@
 const MAX_CONCURRENT_REQUESTS = 12; // 并行请求数量
-const RETRY_TIMES = 2; // 08b
+const RETRY_TIMES = 2; // 出错重试次数
 
 let htmlCache = null;
 let cacheTime = 0;
+let cachedSJQCount = 0; // 缓存 SJQ 条数
+
 // 映射优惠券金额到文本
 const couponMap = { 100: "8-1", 200: "10-2", 300: "12-3", 400: "13-4", 500: "15-5" };
+
+// 获取今天北京时间 0:01 的时间戳
 function getTodayBeijing0h1() {
   const now = Date.now();
   const beijingOffset = 8 * 60 * 60 * 1000;
-  const today0h1 = new Date(new Date(now + beijingOffset).setUTCHours(0, 1, 0, 0) - beijingOffset).getTime();
-  return today0h1;
+  return new Date(new Date(now + beijingOffset).setUTCHours(0, 1, 0, 0) - beijingOffset).getTime();
 }
 
+// 并发池
 async function asyncPool(limit, array, iteratorFn) {
   const ret = [];
   const executing = [];
@@ -31,19 +35,19 @@ async function asyncPool(limit, array, iteratorFn) {
   return Promise.all(ret);
 }
 
+// 获取优惠券并更新 SHOP KV
 async function fetchCoupon(shopName, poi_id_str, env) {
-  const body = {lat: 22.986847,lon: 113.126331,geoType: "GCJ02",geoSource: "network",geoAccuracy: 500,mediumParams: {pageSrc2: "0c3bfd35279b4140b3bd8ecbc41301d6",pageSrc1: "CPS_SELF_OUT_SRC_H5_LINK",
+  const body = { lat: 22.986847,lon: 113.126331,geoType: "GCJ02",geoSource: "network",geoAccuracy: 500,mediumParams: {pageSrc2: "0c3bfd35279b4140b3bd8ecbc41301d6",pageSrc1: "CPS_SELF_OUT_SRC_H5_LINK",
       pageSrc3: "e15d0d4258004ba5b44c1c85e4db4084",scene: "CPS_SELF_SRC",activityId: "6",poi_id_str: poi_id_str,mediumSrc1: "0c3bfd35279b4140b3bd8ecbc41301d6",outActivityId: "6",p: 1016502508465025024,mediaPvId: "dafkdsajffjafdfs",mediaUserId: "10086",bizId: "0c3bfd35279b4140b3bd8ecbc41301d6",callback: "jsonpWXLoader",poiId: "-100"},
 appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId: "e97e858c-34b8-4a40-aeb3-50ae9f178403",pageSessionId: "efa9df7e-3b74-4305-891b-6c0a8daa5438",outerPvId: "",contentPvId: "",recallBizId: "cpsSelfCouponAll",pageNo: 1,hasMore: true,phone: "",categoryTypeList: ["0"],channelType: "SELF",riskParams: { fpPlatform: 5 }
   };
-
-   const headers = {
+  const headers = {
     'origin': 'https://offsiteact.meituan.com','accept-encoding': 'gzip, deflate, br','accept': '*/*','referer': `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`,
     'sec-fetch-mode': 'cors','sec-fetch-site': 'same-origin','accept-language': 'zh-CN,zh-Hans;q=0.9',
     'cookie': '_lxsdk_s=19a1150c1d6-8e8-b67-53e%7C%7C7; logan_session_token=vxzkerxrc86b7j4wpn9x; WEBDFPID=z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0-1761257513891-1745664039919UGIKMYI868c0ee73ab28e1d0b03bc83148500061008; utm_source_rg=AM%254e9nOn9%25133; iuuid=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39; com.sankuai.wmdadoutsite.fe_random=_63.0; wm_ado_ge_x=2QIEE%2BVvVKxpBXOe%2BAR86mRXV%2BdSNRpkhVmxK1Ms3zfT6ivprLZ7LTFctmazeQI1tIxv92KMQtDrhq86RpiC4ccipLut3jn63FoqfSWCXU%2FJG1zWE0ReHlRLEcyg47mZime3DqC03pOK3Tvw3EFhNlqhX6lkd%2BsekQsFsGFWu1WZqFWO033jDNo0Gh3yx%2FvSFpejjsmBTDtQZ7hDTzIuqtCpdLjWtA8ea2G73fM5VGY%3D; mt_c_token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; oops=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; token=AgFbJo6SxK3DpJcpMM3P48ZCjDiQGXRFWL6GGnp4VgdzaZirz_fjU4upZxr1GHH_j4u0GXa54vWAMAAAAABKKwAAgCmL6cqO3noU6uiixfwKWUGxfCViu8uMgsGSq2CVW6N5yKGLFf7D2Pm-fw8ZldMM; userId=2611035973; _lxsdk_cuid=19671af5c41c8-00002ff28e816c-7c6f3d58-505c8-19671af5c41c8; _lxsdk=77497BDC4901C49D5E90A1F9DF96F645B98296AC9AFBD28C9BF3A93155DE0C39',
     'mtgsig': JSON.stringify({ a1: "1.2", a2: Date.now(), a3: "z53wyy01xv7u550x161z50x625uwuyvw80328zu4v2687958u380u3v0", a5: "oVjAOcgNjj6drqWh0Ubeyg4KnNi785b5e/t6eKkotxd350Tc3Vi86EzVWQhAMkrJ37bU7EJE4Nb/xv36wzkdq4bU0mZ8mEZ1XLes3W4K691QgiSjpcTgL1mAMqwORW==", a6: "h1.9gWg/ByL6/Q+dkFaG52FW+tgwc3rraYxeTD9Vs6LQUpEzdcQ+APN9Xyy/w9Er0olxFSqAMXz+oCrASX0gIPpm4cPDGeBY0UbNJOzmydKSBAKOt6c1YHQyl/fZYtMWkH+wzXsANLR/c88rvspt+RemdcNrcis+SDhKS3itQVkJvC/YJhXgRV937wIf3TSc+uoKoVesVD8sVhgvC3FGeQ7M51+z+G1piZkFFtlXPVQLp8g=", a8: "470b09d42a36b46fae88765f3ad8858f", a9: "4.1.1,7,195", a10: "28", x0: 4, d1: "6f961e29be5a92d1eb8b5a5dd1cc8cf6" }),
     'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1','content-type': 'application/json;charset=utf-8'
-  };
+   };
 
   for (let i = 0; i <= RETRY_TIMES; i++) {
     try {
@@ -56,7 +60,6 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
       );
 
       clearTimeout(timeout);
-
       const data = await resp.json();
 
       let couponAmount = '无';
@@ -68,83 +71,113 @@ appContainer: "UNKNOW",rootPvId: "0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b",pagePvId
         }
       }
 
-      // 写入 SHOP KV
       if (env.SHOP) {
         await env.SHOP.put(poi_id_str, `${shopName} ${couponAmount}`);
       }
 
       return `${shopName} ${couponAmount}`;
     } catch (err) {
-      if (i === RETRY_TIMES) {
-        return `${shopName} 无`;
-      }
+      if (i === RETRY_TIMES) return `${shopName} 无`;
     }
   }
 }
 
+// 根据 SHOP KV 生成 HTML
+async function generateHTML(env, kvItems) {
+  const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
+    const val = await env.SHOP.get(item.poi_id_str);
+    const text = val || `${item.shopName} 无`;
+    const link = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${item.poi_id_str}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
+    return `<button onclick="window.location.href='${link}'">${text}</button>`;
+  }));
+
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商家优惠列表</title>
+<style>
+body {
+  font-family: 'system-ui', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  padding: 0 16px 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+  color: #333;
+}
+button {
+  display: block;
+  margin: 10px 0;
+  padding: 10px 12px;
+  width: 100%;
+  background-color: #fff;
+  color: #222;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:active { background-color: #f0f0f0; }
+#container { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div id="container">
+${buttonsHtml.join("\n")}
+</div>
+</body>
+</html>
+  `;
+}
+
+// ------------------- Worker Fetch -------------------
 export default {
   async fetch(request, env) {
     try {
       if (!env.SJQ) return new Response("KV SJQ not bound", { status: 500 });
 
       const today0h1 = getTodayBeijing0h1();
-
-      // 如果缓存存在且未过期，直接返回
-      if (htmlCache && cacheTime > today0h1) {
-        return new Response(htmlCache, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
-      }
-
-      // 获取 SJQ KV 所有 key
       const list = await env.SJQ.list();
-      const kvItems = await Promise.all(
-        list.keys.map(async k => {
-          const shopName = await env.SJQ.get(k.name);
-          return { poi_id_str: k.name, shopName };
-        })
-      );
 
-      // 判断哪些 key 需要更新（SHOP KV 没有数据）
-      const toUpdate = [];
-      for (const item of kvItems) {
-        const val = await env.SHOP.get(item.poi_id_str);
-        if (!val) toUpdate.push(item);
+      let needUpdate = false;
+
+      if (cacheTime <= today0h1) {
+        needUpdate = true; // 新的一天
+      } else if (list.keys.length !== cachedSJQCount) {
+        needUpdate = true; // SJQ 条数变化
       }
 
-      // 并发更新
-      const updatedResults = await asyncPool(MAX_CONCURRENT_REQUESTS, toUpdate, item =>
-        fetchCoupon(item.shopName, item.poi_id_str, env)
-      );
+      if (needUpdate) {
+        const kvItems = await Promise.all(
+          list.keys.map(async k => {
+            const shopName = await env.SJQ.get(k.name);
+            return { poi_id_str: k.name, shopName };
+          })
+        );
 
-      // 使用 SHOP KV 生成按钮
-      const buttonsHtml = await Promise.all(kvItems.map(async (item) => {
-        const text = await env.SHOP.get(item.poi_id_str) || `${item.shopName} 无`;
-        const link = `https://abc.com/poi_id_str=${item.poi_id_str}`;
-        return `<button onclick="window.location.href='${link}'"
-                        style="margin:5px;padding:10px 15px;font-size:14px;cursor:pointer;">
-                  ${text}
-                </button>`;
-      }));
+        await asyncPool(MAX_CONCURRENT_REQUESTS, kvItems, item =>
+          fetchCoupon(item.shopName, item.poi_id_str, env)
+        );
 
-      const html = `
-        <!DOCTYPE html>
-        <html lang="zh">
-        <head>
-          <meta charset="UTF-8">
-          <title>商家优惠列表</title>
-        </head>
-        <body>
-          <h2>商家优惠</h2>
-          ${buttonsHtml.join("\n")}
-        </body>
-        </html>
-      `;
+        htmlCache = await generateHTML(env, kvItems);
+        cachedSJQCount = kvItems.length;
+        cacheTime = Date.now();
+      }
 
-      // 更新内存缓存
-      htmlCache = html;
-      cacheTime = Date.now();
-
-      return new Response(html, { status: 200, headers: { "Content-Type": "text/html;charset=UTF-8" } });
-
+      return new Response(htmlCache, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html;charset=UTF-8",
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0"
+        }
+      });
     } catch (err) {
       return new Response(err.toString(), { status: 500 });
     }
