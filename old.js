@@ -88,7 +88,7 @@ export default {
                             /* 简约外观 */
                             background-color: #f0f0f0; /* 浅灰色背景 */
                             color: #333; /* 默认深色文字 */
-                            text-align: center;
+                            text-align: left;
                             text-decoration: none; /* 移除下划线 */
                             border-radius: 8px; /* 圆角 */
                             border: 1px solid #ccc; /* 细边框 */
