@@ -1,8 +1,7 @@
 /**
  * Cloudflare Worker 脚本
  * 从 KV 命名空间 SJQ 中读取所有键值对，并生成一个包含跳转按钮的 HTML 页面。
- *
- * 需要在 Worker 设置中绑定一个 KV 命名空间，命名为 'SJQ'。
+ * * 优化了样式：简约、固定宽度（约20汉字）、适配手机。
  *
  * @param {Request} request 传入的请求对象
  * @param {Env} env 环境变量（包含 KV 绑定）
@@ -16,54 +15,30 @@ export default {
         }
 
         try {
-            // 1. 从 SJQ KV 命名空间中获取所有键
-            // list() 默认只返回 key，但我们同时也需要 value，所以我们将使用 list() 获取所有 key，然后用 get() 循环获取 value。
-            // 另一种方式是使用 list() 获取 key，然后期望 key 本身就是有意义的，但这与你的要求“取 value 来作为名字”不符。
-            
             const listResponse = await env.SJQ.list();
             const keys = listResponse.keys;
 
-            let htmlContent = '<h1>链接列表</h1>';
+            let htmlContent = '';
             
             // 检查是否有数据
             if (keys.length === 0) {
                 htmlContent += '<p>KV 命名空间中没有找到数据。</p>';
             } else {
-                // 2. 遍历所有键，获取对应的值，并生成按钮
+                // 遍历所有键，获取对应的值，并生成按钮
                 for (const keyInfo of keys) {
                     const key = keyInfo.name;
                     
                     // 获取对应的 value
-                    // 如果 key 不存在或者 value 很大，这里可能会有性能问题。
-                    // 假设 value 只是短文本（按钮名称）。
                     const value = await env.SJQ.get(key, 'text'); 
 
                     if (value) {
-                        // 键用于构建 URL: 
-                        const targetUrl = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?pageSrc2=0c3bfd35279b4140b3bd8ecbc41301d6&pageSrc1=CPS_SELF_OUT_SRC_H5_LINK&pageSrc3=e15d0d4258004ba5b44c1c85e4db4084&scene=CPS_SELF_SRC&rootPvId=0e2008a4-cafa-41c1-9c14-2b1d0bd92c4b&activityId=6&poi_id_str=${key}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
-                        
-                        // 值用于按钮名称
+                        const targetUrl = `https://abc.com/${key}`;
                         const buttonName = value;
 
-                        // 生成跳转按钮的 HTML
-                        // 使用 <a> 标签模拟按钮样式，并实现跳转
+                        // 生成跳转按钮的 HTML (使用 <a> 标签并应用简约样式)
                         htmlContent += `
-                            <div style="margin-bottom: 10px;">
-                                <a href="${targetUrl}" target="_blank" style="
-                                    display: inline-block;
-                                    padding: 10px 20px;
-                                    font-size: 16px;
-                                    cursor: pointer;
-                                    text-align: center;
-                                    text-decoration: none;
-                                    outline: none;
-                                    color: #fff;
-                                    background-color: #4CAF50;
-                                    border: none;
-                                    border-radius: 5px;
-                                    box-shadow: 0 5px #999;
-                                    transition: background-color 0.3s;
-                                ">
+                            <div class="link-item">
+                                <a href="${targetUrl}" target="_blank" class="button">
                                     ${buttonName}
                                 </a>
                             </div>
@@ -73,29 +48,76 @@ export default {
             }
 
 
-            // 3. 构建完整的 HTML 页面
+            // 构建完整的 HTML 页面
             const html = `
                 <!DOCTYPE html>
                 <html lang="zh">
                 <head>
                     <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
                     <title>商家券</title>
                     <style>
+                        /* 手机优先的简约样式 */
                         body { 
-                            font-family: Arial, sans-serif; 
-                            display: flex; 
-                            flex-direction: column; 
-                            align-items: center; 
-                            padding-top: 50px;
+                            font-family: sans-serif; /* 使用客户端默认字体 */
+                            padding: 20px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center; /* 按钮居中 */
+                            margin: 0;
                         }
-                        a:hover {
-                            background-color: #3e8e41;
+
+                        h1 {
+                            margin-bottom: 30px;
                         }
-                        a:active {
-                            background-color: #3e8e41;
-                            box-shadow: 0 2px #666;
-                            transform: translateY(3px);
+
+                        .link-item {
+                            width: 100%; /* 允许项目占据全部宽度 */
+                            display: flex;
+                            justify-content: center; /* 确保按钮在 flex 容器中居中 */
+                            margin-bottom: 15px;
+                        }
+                        
+                        .button {
+                            /* 按钮基础样式：固定宽度，自适应高度 */
+                            display: block; 
+                            width: 90%; /* 在手机上占据大部分宽度 */
+                            max-width: 300px; /* 限制最大宽度，约等于20个汉字（取决于字体大小）*/
+                            padding: 12px 10px;
+                            
+                            /* 简约外观 */
+                            background-color: #f0f0f0; /* 浅灰色背景 */
+                            color: #333; /* 默认深色文字 */
+                            text-align: center;
+                            text-decoration: none; /* 移除下划线 */
+                            border-radius: 8px; /* 圆角 */
+                            border: 1px solid #ccc; /* 细边框 */
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 轻微阴影 */
+                            
+                            /* 保证文字不被强制定义 */
+                            font-size: 16px; 
+                            line-height: 1.5;
+                            word-wrap: break-word; /* 确保长文字能够换行 */
+                            white-space: normal; /* 正常换行 */
+
+                            /* 触摸反馈 */
+                            transition: background-color 0.2s, transform 0.1s;
+                        }
+
+                        .button:hover {
+                            background-color: #e0e0e0;
+                        }
+
+                        .button:active {
+                            background-color: #d0d0d0;
+                            transform: scale(0.98); /* 点击时轻微缩小 */
+                        }
+
+                        /* 针对小屏幕的微调，确保按钮宽度合适 */
+                        @media (max-width: 600px) {
+                            .button {
+                                width: 95%; /* 小屏幕上更宽一点 */
+                            }
                         }
                     </style>
                 </head>
