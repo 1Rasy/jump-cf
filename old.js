@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker 脚本
  * 从 KV 命名空间 SJQ 中读取所有键值对，并生成一个包含跳转按钮的 HTML 页面。
- * * 优化了样式：简约、固定宽度（约20汉字）、适配手机。
+ * * 优化了样式：简约、固定宽度（约20汉字）、适配手机，**新增夜间模式适配**。
  *
  * @param {Request} request 传入的请求对象
  * @param {Env} env 环境变量（包含 KV 绑定）
@@ -32,6 +32,7 @@ export default {
                     const value = await env.SJQ.get(key, 'text'); 
 
                     if (value) {
+                        // 注意：这里仅为示例 URL，保持不变
                         const targetUrl = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?poi_id_str=${key}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
                         const buttonName = value;
 
@@ -57,14 +58,16 @@ export default {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
                     <title>商家券</title>
                     <style>
-                        /* 手机优先的简约样式 */
+                        /* --- 默认（浅色）模式样式 --- */
                         body { 
-                            font-family: sans-serif; /* 使用客户端默认字体 */
+                            font-family: sans-serif;
                             padding: 20px;
                             display: flex;
                             flex-direction: column;
-                            align-items: center; /* 按钮居中 */
+                            align-items: center;
                             margin: 0;
+                            background-color: #fff; /* 默认浅色背景 */
+                            color: #333; /* 默认深色文字 */
                         }
 
                         h1 {
@@ -72,33 +75,32 @@ export default {
                         }
 
                         .link-item {
-                            width: 100%; /* 允许项目占据全部宽度 */
+                            width: 100%;
                             display: flex;
-                            justify-content: center; /* 确保按钮在 flex 容器中居中 */
+                            justify-content: center;
                             margin-bottom: 15px;
                         }
                         
                         .button {
-                            /* 按钮基础样式：固定宽度，自适应高度 */
+                            /* 按钮基础样式 */
                             display: block; 
-                            width: 90%; /* 在手机上占据大部分宽度 */
-                            max-width: 300px; /* 限制最大宽度，约等于20个汉字（取决于字体大小）*/
+                            width: 90%;
+                            max-width: 300px;
                             padding: 12px 10px;
                             
-                            /* 简约外观 */
+                            /* 浅色模式外观 */
                             background-color: #f0f0f0; /* 浅灰色背景 */
                             color: #333; /* 默认深色文字 */
                             text-align: left;
-                            text-decoration: none; /* 移除下划线 */
-                            border-radius: 8px; /* 圆角 */
+                            text-decoration: none;
+                            border-radius: 8px;
                             border: 1px solid #ccc; /* 细边框 */
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 轻微阴影 */
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                             
-                            /* 保证文字不被强制定义 */
                             font-size: 16px; 
                             line-height: 1.5;
-                            word-wrap: break-word; /* 确保长文字能够换行 */
-                            white-space: normal; /* 正常换行 */
+                            word-wrap: break-word;
+                            white-space: normal;
 
                             /* 触摸反馈 */
                             transition: background-color 0.2s, transform 0.1s;
@@ -110,13 +112,38 @@ export default {
 
                         .button:active {
                             background-color: #d0d0d0;
-                            transform: scale(0.98); /* 点击时轻微缩小 */
+                            transform: scale(0.98);
                         }
 
-                        /* 针对小屏幕的微调，确保按钮宽度合适 */
+                        /* 针对小屏幕的微调 */
                         @media (max-width: 600px) {
                             .button {
-                                width: 95%; /* 小屏幕上更宽一点 */
+                                width: 95%;
+                            }
+                        }
+
+                        /* --- 夜间模式适配（使用 prefers-color-scheme）--- */
+                        @media (prefers-color-scheme: dark) {
+                            body {
+                                background-color: #121212; /* 深色背景 */
+                                color: #e0e0e0; /* 浅色文字 */
+                            }
+
+                            .button {
+                                /* 夜间模式按钮样式 */
+                                background-color: #272727; /* 比背景稍浅的深色 */
+                                color: #e0e0e0; /* 浅色文字 */
+                                border: 1px solid #444; /* 深色细边框 */
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.4); /* 更明显的阴影 */
+                            }
+
+                            .button:hover {
+                                background-color: #333333; /* 悬停时颜色变化 */
+                            }
+
+                            .button:active {
+                                background-color: #444444;
+                                transform: scale(0.98);
                             }
                         }
                     </style>
