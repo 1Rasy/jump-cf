@@ -32,7 +32,7 @@ export default {
                     const value = await env.SJQ.get(key, 'text'); 
 
                     if (value) {
-                        const targetUrl = `https://abc.com/${key}`;
+                        const targetUrl = `https://offsiteact.meituan.com/web/hoae/collection_waimai_v8/index.html?poi_id_str=${key}&mediumSrc1=0c3bfd35279b4140b3bd8ecbc41301d6&outActivityId=6&p=1016502508465025024&mediaPvId=dafkdsajffjafdfs&mediaUserId=10086&bizId=0c3bfd35279b4140b3bd8ecbc41301d6&callback=jsonpWXLoader&poiId=-100`;
                         const buttonName = value;
 
                         // 生成跳转按钮的 HTML (使用 <a> 标签并应用简约样式)
