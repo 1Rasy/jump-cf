@@ -78,7 +78,7 @@ export default {
                             width: 100%;
                             display: flex;
                             justify-content: center;
-                            margin-bottom: 15px;
+                            margin-bottom: 10px;
                         }
                         
                         .button {
